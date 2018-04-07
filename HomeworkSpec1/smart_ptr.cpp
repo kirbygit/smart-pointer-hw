@@ -18,12 +18,12 @@
 
 using namespace std;
 
-class null_ptr_exception : public exception
+class null_ptr_exception : public runtime_error
 {
 public:
     virtual const char* what() const throw()
     {
-        return "Unexpected Exception";
+        return "Unexpected Exception, Smart pointer has been read";
     }
 };
 
@@ -38,7 +38,7 @@ private:
 public:
     // Create a smart_ptr that is initialized to NULL. The reference count
     // should be zero.
-    smart_ptr() : ptr_(nullptr), ref_(new int(0))
+    smart_ptr() : ptr_(nullptr), ref_(nullptr)
     {
     
     }
@@ -84,11 +84,26 @@ public:
         
         ptr_ = rhs.ptr_;
         ref_ = rhs.ref_;
+        (*ref_)++;
         return *this;
     }
 
     // This move assignment should steal the right-hand side's pointer data.
-    smart_ptr& operator=(smart_ptr&& rhs);
+    smart_ptr& operator=(smart_ptr&& rhs)
+    {
+        if (*ref_ == 1)
+        {
+            return;
+        }
+        else
+        {
+            (*ref_)--;
+        }
+        rhs.ptr = nullptr;
+        rhs.ref_ = nullptr;
+        
+        return *this;
+    }
     
     // If the smart_ptr is either NULL or has a reference count of one, this
     // function will do nothing and return false. Otherwise, the referred to
@@ -97,17 +112,17 @@ public:
     // smart_ptr points and its reference count will be one.
     bool clone()
     {
-        if (smart_ptr() == nullptr || smart_ptr().ref_count() == 1)
+        if (ptr_ == nullptr || *ref_ == 1)
         {
-            // return nothing if the condition has a reference count of 1 and
-            // smart_ptr is nullptr
             return false;
+            // return nothing if the reference count is 1
         }
         else
         {
-            --ref_count();
-            // deep copy of the object will be created
-            
+            (*ref_)--;
+            ptr_ = new T(*ptr_);
+            ref_ = new int(1);
+            return true;
         }
     }
 
@@ -143,10 +158,8 @@ public:
     // deallocate all dynamic memory
     ~smart_ptr()
     {
-        if (!--*ref_)
+        if (*ref_ == 1)
         {
-            // delete all dynamically allocated memory on
-            // the pointed referred object and referred count
             delete ptr_;
             delete ref_;
         }
@@ -156,32 +169,30 @@ public:
 
 int main()
 {
-        /* TEST CODE
-        int* p { new int { 42 } };
-        smart_ptr<int> sp1 { p };
-    
-        cout << "Ref count is " << sp1.ref_count() << endl;    // Ref Count is 1
-        {
-            smart_ptr<int> sp2 { sp1 };
-            cout << "Ref count is " << sp1.ref_count() << endl;    // Ref Count is 2
-            cout << "Ref count is " << sp2.ref_count() << endl;    // Ref Count is 2
-        }
-        cout << "Ref count is " << sp1.ref_count() << endl;    // Ref Count is 1
-    
-        smart_ptr<int> sp3;
-    
-        cout << "Ref count is " << sp3.ref_count() << endl;    // Ref Count is 0
-    
-        sp3 = sp1;
-    
-        cout << "Ref count is " << sp1.ref_count() << endl;    // Ref Count is 2
-        cout << "Ref count is " << sp3.ref_count() << endl;    // Ref Count is 2
-    
-        smart_ptr<int> sp4 = std::move(sp1);
-    
-        cout << *sp4 << " " << *sp3 << endl;        // prints 42 42
-        cout << *sp1 << endl;                       // throws null_ptr_exception
-         */
+    //        int* p { new int { 42 } };
+    //        smart_ptr<int> sp1 { p };
+    //
+    //        cout << "Ref count is " << sp1.ref_count() << endl;     Ref Count is 1
+    //        {
+    //            smart_ptr<int> sp2 { sp1 };
+    //            cout << "Ref count is " << sp1.ref_count() << endl;     Ref Count is 2
+    //            cout << "Ref count is " << sp2.ref_count() << endl;     Ref Count is 2
+    //        }
+    //        cout << "Ref count is " << sp1.ref_count() << endl;     Ref Count is 1
+    //
+    //        smart_ptr<int> sp3;
+    //
+    //        cout << "Ref count is " << sp3.ref_count() << endl;     Ref Count is 0
+    //
+    //        sp3 = sp1;
+    //
+    //        cout << "Ref count is " << sp1.ref_count() << endl;     Ref Count is 2
+    //        cout << "Ref count is " << sp3.ref_count() << endl;     Ref Count is 2
+    //
+    //        smart_ptr<int> sp4 = std::move(sp1);
+    //
+    //        cout << *sp4 << " " << *sp3 << endl;         prints 42 42
+    //        cout << *sp1 << endl;                        throws null_ptr_exception
     
     cin.get();
     return 0;
